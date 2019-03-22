@@ -4,6 +4,7 @@ import glob
 import matplotlib.pyplot as plt
 import camera_calibration_show_extrinsics as show
 from PIL import Image
+
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 # (8,6) is for the given testing images.
 # If you use the another data (e.g. pictures you take by your smartphone), 
@@ -18,14 +19,16 @@ objpoints = [] # 3d points in real world space
 imgpoints = [] # 2d points in image plane.
 
 # Make a list of calibration images
+# glob is a path library which accepts unix-like path pattern as parameter
 images = glob.glob('data/*.jpg')
 
 # Step through the list and search for chessboard corners
 print('Start finding chessboard corners...')
 for idx, fname in enumerate(images):
     img = cv2.imread(fname)
+
+    # change image's color space to gray
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    plt.imshow(gray)
 
     #Find the chessboard corners
     print('find the chessboard corners of',fname)
