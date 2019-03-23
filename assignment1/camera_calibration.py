@@ -11,6 +11,8 @@ from PIL import Image
 # you need to set the corresponding numbers.
 corner_x = 7
 corner_y = 7
+
+# create a (corner_x*corner_y) x 3 2D matrix to represent corners' world coordinate value
 objp = np.zeros((corner_x*corner_y,3), np.float32)
 objp[:,:2] = np.mgrid[0:corner_x, 0:corner_y].T.reshape(-1,2)
 
@@ -30,9 +32,12 @@ for idx, fname in enumerate(images):
     # change image's color space to gray
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    #Find the chessboard corners
+    # Find the chessboard corners (from image's top(y = 0) to down, right to left(x = 0))
     print('find the chessboard corners of',fname)
-    ret, corners = cv2.findChessboardCorners(gray, (corner_x,corner_y), None)
+
+    # returned corners is a (corner_x*corner_y) x 1 x 2 matrix, each corner is representd by a 2D matrix with single row
+    ret, corners = cv2.findChessboardCorners(gray, (corner_x,corner_y))
+    # print('ret:', ret, ', corners:\n', str(corners))
 
     # If found, add object points, image points
     if ret == True:
