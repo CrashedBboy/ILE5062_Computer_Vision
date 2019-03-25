@@ -112,9 +112,56 @@ for img_corners_per_image, obj_corners_per_image in zip(new_imgpoints, new_objpo
     u, s, vh = np.linalg.svd(h_coeffi, full_matrices=False)
 
     homography = vh.T[:, -1]
-    homography_matrices.append(homography)
+    homography_matrices.append(homography.reshape((3,3)))
 
 print("homographys: \n", str(homography_matrices))
+
+exit()
+
+# solve intrinsic matrix from multiple homography matrix
+
+v = np.zeros((2 * len(homography_matrices), 6))
+for i, h in enumerate(homography_matrices):
+    v[2*i, :] = [
+        h[0,1] * h[0,0],
+        h[0,1] * h[1,0] + h[1,1] * h[0,0],
+        h[0,1] * h[2,0] + h[2,1] * h[0,0],
+        h[1,1] * h[1,0],
+        h[1,1] * h[2,0] + h[2,1] * h[1,0],
+        h[2,1] * h[2,0]
+        ]
+    v[2*i+1, :] = [
+        h[0,0]**2 - h[0,1]**2,
+        2 * (h[0,0] * h[1,0] - h[0,1] * h[1,1]),
+        2 * (h[0,0] * h[2,0] - h[0,1] * h[2,1]),
+        h[1,0]**2 - h[1,1]**2,
+        2 * (h[1,0] * h[2,0] - h[1,1] * h[2,1]),
+        h[2,0]**2 - h[2,1]**2
+    ]
+
+u, s, vh = np.linalg.svd(v, full_matrices=False)
+
+b = vh.T[:, -1]
+B = np.array([
+    [b[0], b[1], b[2]],
+    [b[1], b[3], b[4]],
+    [b[2], b[4], b[5]]
+    ])
+
+print("b: \n", str(b))
+
+# B = K^(-T) * K^(-1), where K is the intrinsic matrix
+# do Cholesky decomposition to solve K
+
+l = np.linalg.cholesky( B )
+
+intrinsic = np.linalg.inv(l.T)
+
+# divide intrinsic by its scale ( [x, y, z] = p * H * [U, V, W], where p is scale, H is homography matrix)
+intrinsic = intrinsic / intrinsic[2,2]
+
+print("intrinsic: \n", str(intrinsic))
+
 exit()
 
 # ----------------------------------------------------------------------------------
