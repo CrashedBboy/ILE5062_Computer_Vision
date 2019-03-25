@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import camera_calibration_show_extrinsics as show
 from PIL import Image
 
+data_size = 3
+
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 # (8,6) is for the given testing images.
 # If you use the another data (e.g. pictures you take by your smartphone), 
@@ -24,9 +26,15 @@ imgpoints = [] # 2d points in image plane.
 # glob is a path library which accepts unix-like path pattern as parameter
 images = glob.glob('data/*.jpg')
 
+data_index = 0
+
 # Step through the list and search for chessboard corners
 print('Start finding chessboard corners...')
 for idx, fname in enumerate(images):
+
+    if data_index >= data_size:
+        break
+
     img = cv2.imread(fname)
 
     # change image's color space to gray
@@ -43,12 +51,13 @@ for idx, fname in enumerate(images):
     if ret == True:
         objpoints.append(objp)
         imgpoints.append(corners)
+        data_index += 1
 
         # Draw and display the corners
-        cv2.drawChessboardCorners(img, (corner_x,corner_y), corners, ret)
-        plt.imshow(img)
+        # cv2.drawChessboardCorners(img, (corner_x,corner_y), corners, ret)
+        # plt.imshow(img)
 
-
+'''
 #######################################################################################################
 #                                Homework 1 Camera Calibration                                        #
 #               You need to implement camera calibration(02-camera p.76-80) here.                     #
@@ -64,16 +73,52 @@ img_size = (img.shape[1], img.shape[0])
 # Notice that rvecs is rotation vector, not the rotation matrix, and tvecs is translation vector.
 # In practice, you'll derive extrinsics matrixes directly. The shape must be [pts_num,3,4], and use them to plot.
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size,None,None)
+# rvec [r1, r2, r3] is a vector related to rodrigues vector [theta, axisX, axisY, axisZ]
+# where theta = sqrt(r1^2 + r2^2 + r3^2), [axisX, axisY, axisZ] =  rvec/theta = [r1/theta, r2/theta, r3/theta]
+
 Vr = np.array(rvecs)
 Tr = np.array(tvecs)
 extrinsics = np.concatenate((Vr, Tr), axis=1).reshape(-1,6)
-"""
-Write your code here
+'''
 
+# Write your code here
+# ----------------------------------------------------------------------------------
 
+# reconstruct corners' image-points and world-points matrices
+# for an image, image-points matrix: 49(corner_x*corner_y) x 2, world-points matrix: 49(corner_x*corner_y) x 3
 
+new_imgpoints = np.array(imgpoints)
+new_imgpoints = new_imgpoints.reshape((new_imgpoints.shape[0], (corner_x*corner_y), 2))
 
-"""
+new_objpoints = np.array(objpoints)
+
+homography_matrices = []
+
+# iterate through each image's obj points & image points
+for img_corners_per_image, obj_corners_per_image in zip(new_imgpoints, new_objpoints):
+
+    h_coeffi = np.zeros((corner_x * corner_y * 2, 9))
+
+    # pick 5 corners to solve homography matrix
+    i = 0
+    for corner_img, corner_obj in zip(img_corners_per_image, obj_corners_per_image):
+        # corner_img -> [x, y]
+        # corner_obj -> [U, V, 0]
+
+        h_coeffi[2 * i, :] = [corner_obj[0], corner_obj[1], 1, 0, 0, 0, (-1)*corner_obj[0]*corner_img[0], (-1)*corner_obj[1]*corner_img[0], (-1)*corner_img[0]]
+        h_coeffi[2 * i + 1, :] = [0, 0, 0, corner_obj[0], corner_obj[1], 1, (-1)*corner_obj[0]*corner_img[1], (-1)*corner_obj[1]*corner_img[1], (-1)*corner_img[1]]     
+        i += 1
+
+    u, s, vh = np.linalg.svd(h_coeffi, full_matrices=False)
+
+    homography = vh.T[:, -1]
+    homography_matrices.append(homography)
+
+print("homographys: \n", str(homography_matrices))
+exit()
+
+# ----------------------------------------------------------------------------------
+
 # show the camera extrinsics
 print('Show the camera extrinsics')
 # plot setting
