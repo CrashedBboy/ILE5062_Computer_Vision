@@ -121,6 +121,10 @@ for img_corners_per_image, obj_corners_per_image in zip(new_imgpoints, new_objpo
     u, s, vh = np.linalg.svd(h_coeffi, full_matrices=False)
 
     homography = vh.T[:, -1]
+
+    if homography[-1] < 0:
+        homography = homography * (-1)
+
     homography_matrices.append(homography.reshape((3,3)))
 
 print("homographys: \n", str(homography_matrices))
@@ -147,6 +151,7 @@ for i, h in enumerate(homography_matrices):
     ]
 
 u, s, vh = np.linalg.svd(v, full_matrices=False)
+print("s : \n", str(s))
 
 b = vh.T[:, -1]
 print("b: \n", str(b))
