@@ -28,6 +28,8 @@ images = glob.glob('data/*.jpg')
 
 data_index = 0
 
+img_horizontal = None
+
 # Step through the list and search for chessboard corners
 print('Start finding chessboard corners...')
 for idx, fname in enumerate(images):
@@ -36,6 +38,13 @@ for idx, fname in enumerate(images):
         break
 
     img = cv2.imread(fname)
+
+    if idx == 0:
+        # width - height
+        if img.shape[1] - img.shape[0] >= 0: 
+            img_horizontal = True
+        else:
+            img_horizontal = False
 
     # change image's color space to gray
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -116,8 +125,6 @@ for img_corners_per_image, obj_corners_per_image in zip(new_imgpoints, new_objpo
 
 print("homographys: \n", str(homography_matrices))
 
-exit()
-
 # solve intrinsic matrix from multiple homography matrix
 
 v = np.zeros((2 * len(homography_matrices), 6))
@@ -142,6 +149,13 @@ for i, h in enumerate(homography_matrices):
 u, s, vh = np.linalg.svd(v, full_matrices=False)
 
 b = vh.T[:, -1]
+print("b: \n", str(b))
+
+# negative diagonal
+if (b[0] < 0 or b[3] < 0 or b[5] < 0):
+    print("b * (-1)")
+    b = b * (-1)
+
 B = np.array([
     [b[0], b[1], b[2]],
     [b[1], b[3], b[4]],
@@ -149,13 +163,18 @@ B = np.array([
     ])
 
 print("b: \n", str(b))
+print("B: \n", str(B))
 
 # B = K^(-T) * K^(-1), where K is the intrinsic matrix
 # do Cholesky decomposition to solve K
 
 l = np.linalg.cholesky( B )
 
+print("K^(-T): \n", str(l))
+
 intrinsic = np.linalg.inv(l.T)
+
+print("raw intrinsic: \n", str(intrinsic))
 
 # divide intrinsic by its scale ( [x, y, z] = p * H * [U, V, W], where p is scale, H is homography matrix)
 intrinsic = intrinsic / intrinsic[2,2]
