@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import camera_calibration_show_extrinsics as show
 from PIL import Image
 
-data_size = 3
+data_size = 10
 
 # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
 # (8,6) is for the given testing images.
@@ -151,14 +151,11 @@ for i, h in enumerate(homography_matrices):
     ]
 
 u, s, vh = np.linalg.svd(v, full_matrices=False)
-print("s : \n", str(s))
 
 b = vh.T[:, -1]
-print("b: \n", str(b))
 
 # negative diagonal
 if (b[0] < 0 or b[3] < 0 or b[5] < 0):
-    print("b * (-1)")
     b = b * (-1)
 
 B = np.array([
@@ -167,7 +164,6 @@ B = np.array([
     [b[2], b[4], b[5]]
     ])
 
-print("b: \n", str(b))
 print("B: \n", str(B))
 
 # B = K^(-T) * K^(-1), where K is the intrinsic matrix
@@ -175,20 +171,40 @@ print("B: \n", str(B))
 
 l = np.linalg.cholesky( B )
 
-print("K^(-T): \n", str(l))
-
 intrinsic = np.linalg.inv(l.T)
-
-print("raw intrinsic: \n", str(intrinsic))
 
 # divide intrinsic by its scale ( [x, y, z] = p * H * [U, V, W], where p is scale, H is homography matrix)
 intrinsic = intrinsic / intrinsic[2,2]
 
 print("intrinsic: \n", str(intrinsic))
 
-exit()
+# solve extrinsic matrix: rotation & translation
+extrinsic_matrices = np.zeros((len(homography_matrices), 6))
+
+for i, h in enumerate(homography_matrices):
+    intrinsic_inverse = np.linalg.inv(intrinsic)
+
+    lambda_value = 1 / np.linalg.norm(np.matmul(intrinsic_inverse, h[:, 0]))
+
+    r1 = np.matmul(lambda_value * intrinsic_inverse, h[:, 0])
+    r2 = np.matmul(lambda_value * intrinsic_inverse, h[:, 1])
+    r3 = np.cross(r1, r2)
+
+    t = np.matmul(lambda_value * intrinsic_inverse, h[:, 2])
+    
+    rotation_matrix = np.zeros((3, 3))
+    rotation_matrix[:,0] = r1
+    rotation_matrix[:,1] = r2
+    rotation_matrix[:,2] = r3
+
+    r_rodrigues, _ = cv2.Rodrigues(rotation_matrix)
+
+    extrinsic_matrices[i,:] = [r_rodrigues[0], r_rodrigues[1], r_rodrigues[2], t[0], t[1], t[2]]
 
 # ----------------------------------------------------------------------------------
+
+mtx = intrinsic
+extrinsics = extrinsic_matrices
 
 # show the camera extrinsics
 print('Show the camera extrinsics')
