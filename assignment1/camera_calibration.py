@@ -5,100 +5,121 @@ import matplotlib.pyplot as plt
 import camera_calibration_show_extrinsics as show
 from PIL import Image
 
-data_size = 10
+DATA_SIZE = 10
 
-# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
-# (8,6) is for the given testing images.
-# If you use the another data (e.g. pictures you take by your smartphone), 
-# you need to set the corresponding numbers.
-corner_x = 7
-corner_y = 7
+# number of corner per axis
+CORNER_X = 7
+CORNER_Y = 7
 
-# create a (corner_x*corner_y) x 3 2D matrix to represent corners' world coordinate value
-objp = np.zeros((corner_x*corner_y,3), np.float32)
-objp[:,:2] = np.mgrid[0:corner_x, 0:corner_y].T.reshape(-1,2)
+# Initial declaration
+# ------------------------------------------------------------------------------------------------------
+
+# prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,6,0)
+# create a (CORNER_X*CORNER_Y) x 3 2D matrix to represent corners' world coordinate value
+objp = np.zeros((CORNER_X*CORNER_Y,3), np.float32)
+objp[:,:2] = np.mgrid[0:CORNER_X, 0:CORNER_Y].T.reshape(-1,2)
 
 # Arrays to store object points and image points from all the images.
+# [note] some of the images have been rotated
 objpoints = [] # 3d points in real world space
-imgpoints = [] # 2d points in image plane.
+imgpoints = [] # 2d points in image plane
+
+# used to store the index of images, which have different orientation(vertical <--> horizontal) from others
+rotated_index = []
+
+# mapping between "rotated imgpoints/homography_matrices" and "original unrotated unrotated_imgpoints/unrotated_homography_matrices"
+# element format: [rotated_homography matrix index, original_homography matrix index]
+rotation_map = []
+unrotated_imgpoints = []
+unrotated_objpoints = []
+
+# Find the 2D corner positions of each image
+# ------------------------------------------------------------------------------------------------------
 
 # Make a list of calibration images
 # glob is a path library which accepts unix-like path pattern as parameter
 images = glob.glob('data/*.jpg')
 
-data_index = 0
+count = 0
 
+# image set's orientation (horizontal or vertical)
 img_horizontal = None
 
 # Step through the list and search for chessboard corners
 print('Start finding chessboard corners...')
 for idx, fname in enumerate(images):
 
-    if data_index >= data_size:
+    if count >= DATA_SIZE:
         break
+
+    # Find the chessboard corners (from image's top(y = 0) to down, right to left(x = 0))
+    print('finding chessboard corners of', fname)
 
     img = cv2.imread(fname)
 
+    # check image orientation
+    need_rotation = False
     if idx == 0:
         # width - height
         if img.shape[1] - img.shape[0] >= 0: 
             img_horizontal = True
         else:
             img_horizontal = False
+    else:
+        # check if current image's orientation is different from image set's
+        if (img_horizontal and (img.shape[1] - img.shape[0]) < 0) or (not img_horizontal and (img.shape[1] - img.shape[0]) >= 0):
+            print('different orientation found')
+            need_rotation = True
 
     # change image's color space to gray
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Find the chessboard corners (from image's top(y = 0) to down, right to left(x = 0))
-    print('find the chessboard corners of',fname)
+    if need_rotation:
 
-    # returned corners is a (corner_x*corner_y) x 1 x 2 matrix, each corner is representd by a 2D matrix with single row
-    ret, corners = cv2.findChessboardCorners(gray, (corner_x,corner_y))
-    # print('ret:', ret, ', corners:\n', str(corners))
+        # rotate image which has different orientation, so that we have all homography matrix in the same orientation,
+        # then we are able to calculate the correct intrinsic matrix (camera matrix)
+        rotated_gray = np.rot90(gray)
 
-    # If found, add object points, image points
-    if ret == True:
-        objpoints.append(objp)
-        imgpoints.append(corners)
-        data_index += 1
+        # returned corners is a (CORNER_X*CORNER_Y) x 1 x 2 matrix, each corner is representd by a 2D matrix with single row
+        ret, rotated_corners = cv2.findChessboardCorners(rotated_gray, (CORNER_X, CORNER_Y))
 
-        # Draw and display the corners
-        # cv2.drawChessboardCorners(img, (corner_x,corner_y), corners, ret)
-        # plt.imshow(img)
+        # If found, add object points, image points
+        if ret == True:
+            objpoints.append(objp)
+            imgpoints.append(rotated_corners)
 
-'''
-#######################################################################################################
-#                                Homework 1 Camera Calibration                                        #
-#               You need to implement camera calibration(02-camera p.76-80) here.                     #
-#   DO NOT use the function directly, you need to write your own calibration function from scratch.   #
-#                                          H I N T                                                    #
-#                        1.Use the points in each images to find Hi                                   #
-#                        2.Use Hi to find out the intrinsic matrix K                                  #
-#                        3.Find out the extrensics matrix of each images.                             #
-#######################################################################################################
-print('Camera calibration...')
-img_size = (img.shape[1], img.shape[0])
-# You need to comment these functions and write your calibration function from scratch.
-# Notice that rvecs is rotation vector, not the rotation matrix, and tvecs is translation vector.
-# In practice, you'll derive extrinsics matrixes directly. The shape must be [pts_num,3,4], and use them to plot.
-ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img_size,None,None)
-# rvec [r1, r2, r3] is a vector related to rodrigues vector [theta, axisX, axisY, axisZ]
-# where theta = sqrt(r1^2 + r2^2 + r3^2), [axisX, axisY, axisZ] =  rvec/theta = [r1/theta, r2/theta, r3/theta]
+        ''' Find corners of original image
 
-Vr = np.array(rvecs)
-Tr = np.array(tvecs)
-extrinsics = np.concatenate((Vr, Tr), axis=1).reshape(-1,6)
-'''
+        we also have to find corners and calculate homography matrix for the original(unrotated) image,
+        [WHY?] because we need the original homographys (instead of the rotated image's homography) to calculate the extrinsic matrices,
+        which contain the correct translation and rotation
+        '''
 
-# Write your code here
-# ----------------------------------------------------------------------------------
+        rotated_index.append(idx)
+        rotation_map.append([idx, len(rotated_index) - 1])
+
+        ret, unrotated_corners = cv2.findChessboardCorners(gray, (CORNER_X, CORNER_Y))
+
+        if ret == True:
+            unrotated_objpoints.append(objp)
+            unrotated_imgpoints.append(unrotated_corners)
+            
+    else:
+
+        ret, corners = cv2.findChessboardCorners(gray, (CORNER_X,CORNER_Y))
+
+        if ret == True:
+            objpoints.append(objp)
+            imgpoints.append(corners)
+    count += 1
+
+# Calculate the homography matrix of (with/without rotation)images
+# ------------------------------------------------------------------------------------------------------
 
 # reconstruct corners' image-points and world-points matrices
-# for an image, image-points matrix: 49(corner_x*corner_y) x 2, world-points matrix: 49(corner_x*corner_y) x 3
-
+# for an image, image-points matrix: 49(CORNER_X*CORNER_Y) x 2, world-points matrix: 49(CORNER_X*CORNER_Y) x 3
 new_imgpoints = np.array(imgpoints)
-new_imgpoints = new_imgpoints.reshape((new_imgpoints.shape[0], (corner_x*corner_y), 2))
-
+new_imgpoints = new_imgpoints.reshape((new_imgpoints.shape[0], (CORNER_X*CORNER_Y), 2))
 new_objpoints = np.array(objpoints)
 
 homography_matrices = []
@@ -106,14 +127,42 @@ homography_matrices = []
 # iterate through each image's obj points & image points
 for img_corners_per_image, obj_corners_per_image in zip(new_imgpoints, new_objpoints):
 
-    h_coeffi = np.zeros((corner_x * corner_y * 2, 9))
+    h_coeffi = np.zeros((CORNER_X * CORNER_Y * 2, 9))
 
-    # pick 5 corners to solve homography matrix
     i = 0
     for corner_img, corner_obj in zip(img_corners_per_image, obj_corners_per_image):
         # corner_img -> [x, y]
         # corner_obj -> [U, V, 0]
+        h_coeffi[2 * i, :] = [corner_obj[0], corner_obj[1], 1, 0, 0, 0, (-1)*corner_obj[0]*corner_img[0], (-1)*corner_obj[1]*corner_img[0], (-1)*corner_img[0]]
+        h_coeffi[2 * i + 1, :] = [0, 0, 0, corner_obj[0], corner_obj[1], 1, (-1)*corner_obj[0]*corner_img[1], (-1)*corner_obj[1]*corner_img[1], (-1)*corner_img[1]]     
+        i += 1
 
+    u, s, vh = np.linalg.svd(h_coeffi, full_matrices=False)
+
+    homography = vh.T[:, -1]
+
+    # make every homography matrix's vectors are in the same direction
+    if homography[-1] < 0:
+        homography = homography * (-1)
+
+    homography_matrices.append(homography.reshape((3,3)))
+
+# Calculate the homography matrix of original unrotated images which have different orientation
+# (algorithm is the same as the algorithm of finding rotated images' homography)
+# ------------------------------------------------------------------------------------------------------
+
+new_unrotated_imgpoints = np.array(unrotated_imgpoints)
+new_unrotated_imgpoints = new_unrotated_imgpoints.reshape((new_unrotated_imgpoints.shape[0], (CORNER_X*CORNER_Y), 2))
+new_unrotated_objpoints = np.array(unrotated_objpoints)
+
+unrotated_homography_matrices = []
+
+for img_corners_per_image, obj_corners_per_image in zip(new_unrotated_imgpoints, new_unrotated_objpoints):
+
+    h_coeffi = np.zeros((CORNER_X * CORNER_Y * 2, 9))
+
+    i = 0
+    for corner_img, corner_obj in zip(img_corners_per_image, obj_corners_per_image):
         h_coeffi[2 * i, :] = [corner_obj[0], corner_obj[1], 1, 0, 0, 0, (-1)*corner_obj[0]*corner_img[0], (-1)*corner_obj[1]*corner_img[0], (-1)*corner_img[0]]
         h_coeffi[2 * i + 1, :] = [0, 0, 0, corner_obj[0], corner_obj[1], 1, (-1)*corner_obj[0]*corner_img[1], (-1)*corner_obj[1]*corner_img[1], (-1)*corner_img[1]]     
         i += 1
@@ -125,11 +174,10 @@ for img_corners_per_image, obj_corners_per_image in zip(new_imgpoints, new_objpo
     if homography[-1] < 0:
         homography = homography * (-1)
 
-    homography_matrices.append(homography.reshape((3,3)))
+    unrotated_homography_matrices.append(homography.reshape((3,3)))
 
-print("homographys: \n", str(homography_matrices))
-
-# solve intrinsic matrix from multiple homography matrix
+# solve intrinsic matrix from multiple homography matrices (rotated images' homography matrices)
+# ------------------------------------------------------------------------------------------------------------------
 
 v = np.zeros((2 * len(homography_matrices), 6))
 for i, h in enumerate(homography_matrices):
@@ -164,8 +212,6 @@ B = np.array([
     [b[2], b[4], b[5]]
     ])
 
-print("B: \n", str(B))
-
 # B = K^(-T) * K^(-1), where K is the intrinsic matrix
 # do Cholesky decomposition to solve K
 
@@ -176,13 +222,42 @@ intrinsic = np.linalg.inv(l.T)
 # divide intrinsic by its scale ( [x, y, z] = p * H * [U, V, W], where p is scale, H is homography matrix)
 intrinsic = intrinsic / intrinsic[2,2]
 
-print("intrinsic: \n", str(intrinsic))
+# Solving extrinsic matrices: rotation & translation
+# ------------------------------------------------------------------------------------------------------------------------------------
 
-# solve extrinsic matrix: rotation & translation
+'''
+When calculate extrinsic matrix of different-orientation image,
+we need to use original unrotated image's homography and the "right" intrinsic matrix C,
+which C is the intrinsic but:
+    1. (f/Sx), (f/Sy) swapped
+    2. Ox, Oy swapped
+(f is focal length, Sx is "sensor width/pixels number in width", Ox is offset in X direction)
+'''
+
 extrinsic_matrices = np.zeros((len(homography_matrices), 6))
 
 for i, h in enumerate(homography_matrices):
-    intrinsic_inverse = np.linalg.inv(intrinsic)
+
+    rotated = False
+    for m in rotation_map:
+        if i == m[0]:
+            print("solving", i, "-th extrinsics, replace homography with unrotated one")
+            h = unrotated_homography_matrices[m[1]]
+            rotated = True
+            break
+
+    if rotated:
+        # swapping elements related to x/y direction
+        unrotated_intrinsic = np.copy(intrinsic)
+        swap_tmp = unrotated_intrinsic[0,0]
+        unrotated_intrinsic[0,0] = unrotated_intrinsic[1,1]
+        unrotated_intrinsic[1,1] = swap_tmp
+        swap_tmp = unrotated_intrinsic[0,2]
+        unrotated_intrinsic[0,2] = unrotated_intrinsic[1,2]
+        unrotated_intrinsic[1,2] = swap_tmp
+        intrinsic_inverse = np.linalg.inv(unrotated_intrinsic)
+    else:
+        intrinsic_inverse = np.linalg.inv(intrinsic)
 
     lambda_value = 1 / np.linalg.norm(np.matmul(intrinsic_inverse, h[:, 0]))
 
@@ -201,7 +276,8 @@ for i, h in enumerate(homography_matrices):
 
     extrinsic_matrices[i,:] = [r_rodrigues[0], r_rodrigues[1], r_rodrigues[2], t[0], t[1], t[2]]
 
-# ----------------------------------------------------------------------------------
+# Draw camera position on 3D plot
+# ---------------------------------------------------------------------------
 
 mtx = intrinsic
 extrinsics = extrinsic_matrices
@@ -225,8 +301,8 @@ square_size = 1
 # True -> fix board, moving cameras
 # False -> fix camera, moving boards
 min_values, max_values = show.draw_camera_boards(ax, camera_matrix, cam_width, cam_height,
-                                                scale_focal, extrinsics, board_width,
-                                                board_height, square_size, True)
+    scale_focal, extrinsics, board_width,
+    board_height, square_size, True)
 
 X_min = min_values[0]
 X_max = max_values[0]
