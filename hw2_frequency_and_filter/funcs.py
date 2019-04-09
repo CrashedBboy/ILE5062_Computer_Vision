@@ -63,11 +63,8 @@ def frequency_filtering(image, image_filter):
 
     filtered_spectrum = np.log(np.abs(filtered_frequency) + 1) # add 1 to avoid "divided by zero" exception
 
-    filtered_image = np.fft.ifft2(np.fft.ifftshift(filtered_frequency)).real
+    filtered_image = np.abs(np.fft.ifft2(np.fft.ifftshift(filtered_frequency)))
 
-    # normalize
-    filtered_image = filtered_image - filtered_image.min()
-    filtered_image = (filtered_image / filtered_image.max()) * 255
     filtered_image = filtered_image.astype(np.uint8)
 
     return filtered_image, filtered_spectrum
