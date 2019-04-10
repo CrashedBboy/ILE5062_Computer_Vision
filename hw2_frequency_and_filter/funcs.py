@@ -80,3 +80,30 @@ def get_image_frequency(image):
     magnitude_spectrum = np.log(np.abs(shifted_frequency))
 
     return magnitude_spectrum
+
+# shape: tuple, cut_off_ratio: float
+def get_gaussian_lp_filter(shape, cut_off_ratio):
+    # declare low pass filter on frequency domain (element values: [0, 1], pass or not)
+    gaussian_filter = np.zeros(shape, dtype=np.float64)
+
+    # compute "how low" the frequency can pass (radius of the circle)
+    cut_off_frequency = math.ceil(cut_off_ratio * 0.5 * shape[0])
+
+    if (shape[0] > shape[1]):
+        cut_off_frequency = math.ceil(cut_off_ratio * 0.5 * shape[1])
+    
+    # write values to filter
+    # we need to shift the index, [0, 1, 2, 3, 4] --> [-2, -1, 0, 1, 2]; [0, 1, 2, 3] -> [-1.5, -0.5, 0.5, 1.5]
+    u_offset = (gaussian_filter.shape[0]-1) / 2
+    v_offset = (gaussian_filter.shape[1]-1) / 2
+
+    for u in range(gaussian_filter.shape[0]):
+        shifted_u = u - u_offset
+
+        for v in range(gaussian_filter.shape[1]):
+            shifted_v = v - v_offset
+            radius_from_center = (shifted_u**2 + shifted_v**2)**(0.5)
+
+            gaussian_filter[u, v] = math.exp( (-1) * radius_from_center**2 / (2 * cut_off_frequency**2))
+
+    return gaussian_filter

@@ -6,7 +6,7 @@ import funcs
 
 IMG = './data/task1and2_hybrid_pyramid/cat.jpg'
 
-CUT_OFF_RATIO = 0.2
+CUT_OFF_RATIO = 0.05
 
 absolute_img_path = path.abspath( path.join( path.dirname(__file__), IMG) )
 
@@ -14,7 +14,6 @@ if not path.exists(absolute_img_path):
     print("image not found:", absolute_img_path)
     exit()
 
-# image = cv2.imread(absolute_img_path, cv2.IMREAD_GRAYSCALE)
 image = cv2.cvtColor(cv2.imread(absolute_img_path), cv2.COLOR_BGR2RGB)
 
 if image.data == None:
@@ -28,7 +27,7 @@ filtered_spectrum = np.zeros(image.shape, dtype=np.float64)
 
 for ch in range(image.shape[2]):
 
-    low_pass_filter = funcs.get_ideal_lp_filter(image[:,:,ch].shape, CUT_OFF_RATIO)
+    low_pass_filter = funcs.get_gaussian_lp_filter(image[:,:,ch].shape, CUT_OFF_RATIO)
 
     filtered_image[:,:,ch], filtered_spectrum[:,:,ch] = funcs.frequency_filtering(image[:,:,ch], low_pass_filter)
  
