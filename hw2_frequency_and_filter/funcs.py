@@ -6,7 +6,7 @@ import math
 
 # draw & show image
 def img_show(image):
-    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    plt.imshow(image)
     plt.show()
 
 def imgs_compare(image1, image2):
@@ -49,7 +49,7 @@ def get_ideal_lp_filter(shape, cut_off_ratio):
     return low_pass_filter
 
 # image: grayscale image or image with only one channel(shape=M*N*1), filter: matrix size must equal to image's 
-def frequency_filtering(image, image_filter):
+def frequency_filtering(image, image_filter, convert_uint8 = True):
 
     # Compute the 2-dimensional discrete Fourier Transform
     frequency = np.fft.fft2(image)
@@ -63,9 +63,12 @@ def frequency_filtering(image, image_filter):
 
     filtered_spectrum = np.log(np.abs(filtered_frequency) + 1) # add 1 to avoid "divided by zero" exception
 
-    filtered_image = np.abs(np.fft.ifft2(np.fft.ifftshift(filtered_frequency)))
+    filtered_image = np.fft.ifft2(np.fft.ifftshift(filtered_frequency)).real
 
-    filtered_image = filtered_image.astype(np.uint8)
+    filtered_image[filtered_image < 0] = 0
+
+    if convert_uint8:
+        filtered_image = filtered_image.astype(np.uint8)
 
     return filtered_image, filtered_spectrum
 
