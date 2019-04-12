@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 import os.path as path
 import funcs
 
-IMG = './data/task1and2_hybrid_pyramid/cat.jpg'
+IMG = './data/task1_hybrid/cat.jpg'
 
 CUT_OFF_RATIO = 0.03
 

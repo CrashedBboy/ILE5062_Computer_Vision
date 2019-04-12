@@ -1,7 +1,7 @@
 import glob
 from PIL import Image
 
-DIR = './data/task1and2_hybrid_pyramid'
+DIR = './data/task1_hybrid'
 
 file_list = glob.glob(DIR + '/*')
 

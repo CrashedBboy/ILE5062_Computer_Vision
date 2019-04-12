@@ -4,7 +4,7 @@ from os import path
 import math
 import funcs
 
-IMG = './data/task1and2_hybrid_pyramid/cat.jpg'
+IMG = './data/task1_hybrid/cat.jpg'
 
 # parameters of gaussian
 G_KERNEL_SIZE = 9
