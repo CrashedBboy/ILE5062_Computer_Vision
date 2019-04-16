@@ -5,7 +5,7 @@ import os.path as path
 import funcs
 import math
 
-SCALE = 4
+SCALE = 8
 
 IMG = './data/task2_pyramid/small_cat.jpg'
 
@@ -52,4 +52,4 @@ for row in range(scaled_image.shape[0]):
             
             scaled_image[row, column, ch] = round(interpolated)
 
-cv2.imwrite(path.join(abs_output_path, 'bl_scaled_' + str(SCALE) + '_' + image_basename), scaled_image)
+cv2.imwrite(path.join(abs_output_path, 'scaled_bl_' + str(SCALE) + '_' + image_basename), scaled_image)
