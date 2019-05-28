@@ -3,11 +3,12 @@ import numpy as np
 import scipy.signal as signal
 from matplotlib import pyplot as plt
 import os.path as path
+import math
 import funcs
 
 # parameters of gaussian
-G_KERNEL_SIZE = 5
-G_SIGMA = 1.4
+G_KERNEL_SIZE = 3
+G_SIGMA = 1
 
 IMAGE = './data/freedom_gundam_head.jpg'
 
@@ -38,6 +39,9 @@ gaussian_kernel = gaussian_kernel / gaussian_kernel.sum()
 
 blurred_image = signal.convolve2d(gray_image, gaussian_kernel, boundary='symm', mode='same')
 
+plt.imshow(blurred_image, cmap='gray')
+plt.show()
+
 # step 2. use sobel operator to find edge (gradient)
 
 sobel_x = np.array(
@@ -62,3 +66,52 @@ gradient_y = signal.convolve2d(blurred_image, sobel_y, boundary='symm', mode='sa
 gradient_magnitude = np.sqrt(gradient_x**2 + gradient_y**2)
 
 gradient_orientation = np.arctan2(gradient_y, gradient_x)
+
+# step 3. do non-maximum suppression
+
+thin_edges = np.copy(gradient_magnitude)
+
+for r in range(1, thin_edges.shape[0] - 1):
+    for c in range(1, thin_edges.shape[1] - 1):
+
+        radian = gradient_orientation[r,c]
+
+        if radian < 0:
+            radian += math.pi
+
+        degree = radian * (180 / math.pi)
+
+        n1 = 0
+        n2 = 0
+
+        if (degree >= 0 and degree < 22.5) or (degree >= 157.5 and degree <= 180):
+            # compare with left and right neighbor
+
+            n1 = thin_edges[r, c-1]
+            n2 = thin_edges[r, c+1]
+
+        elif (degree >= 22.5 and degree < 67.5):
+            # compare with upper right and lower left neighbor
+
+            n1 = thin_edges[r-1, c+1]
+            n2 = thin_edges[r+1, c-1]
+
+        elif (degree >= 67.5 and degree < 112.5):
+            # compare with upper and lower neighbor
+
+            n1 = thin_edges[r-1, c]
+            n2 = thin_edges[r+1, c]
+
+        elif (degree >= 112.5 and degree < 157.5):
+            # compare with upper left and lower right
+
+            n1 = thin_edges[r-1, c-1]
+            n2 = thin_edges[r+1, c+1]
+        
+        center = thin_edges[r,c]
+
+        if (center < n1) or (center < n2):
+            thin_edges[r,c] = 0
+
+plt.imshow(thin_edges, cmap='gray')
+plt.show()
