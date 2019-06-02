@@ -10,6 +10,12 @@ import funcs
 G_KERNEL_SIZE = 3
 G_SIGMA = 1
 
+# parameters of double threshold
+STRONG_THRESHOLD = 0.3
+WEAK_THRESHOLD = 0.1
+STRONG_VALUE = 255
+WEAK_VALUE = 50
+
 IMAGE = './data/freedom_gundam_head.jpg'
 
 image_path = path.abspath( path.join( path.dirname(__file__), IMAGE) )
@@ -38,9 +44,6 @@ gaussian_kernel = gaussian_kernel / gaussian_kernel.sum()
 # print("Kernel size:", G_KERNEL_SIZE, ", sigma value:", G_SIGMA, ", Gaussian kernel: \n", gaussian_kernel)
 
 blurred_image = signal.convolve2d(gray_image, gaussian_kernel, boundary='symm', mode='same')
-
-plt.imshow(blurred_image, cmap='gray')
-plt.show()
 
 # step 2. use sobel operator to find edge (gradient)
 
@@ -113,5 +116,26 @@ for r in range(1, thin_edges.shape[0] - 1):
         if (center < n1) or (center < n2):
             thin_edges[r,c] = 0
 
+# step 4. do double thresholing
+
+thresholded = np.copy(thin_edges)
+
+strong_threshold = thresholded.max() * STRONG_THRESHOLD
+weak_threshold = thresholded.max() * WEAK_THRESHOLD
+
+thresholded[thresholded < weak_threshold] = 0
+thresholded[(thresholded < strong_threshold) & (thresholded >= weak_threshold)] = WEAK_VALUE
+thresholded[thresholded >= strong_threshold] = STRONG_VALUE
+
+thresholded = thresholded.astype(np.uint8)
+
+plt.subplot(1, 3, 1)
+plt.imshow(gradient_magnitude, cmap='gray')
+plt.title('Gradient Magnitude'), plt.xticks([]), plt.yticks([])
+plt.subplot(1, 3, 2)
 plt.imshow(thin_edges, cmap='gray')
+plt.title('non-maximum suppression'), plt.xticks([]), plt.yticks([])
+plt.subplot(1, 3, 3)
+plt.imshow(thresholded, cmap='gray')
+plt.title('double thresholded'), plt.xticks([]), plt.yticks([])
 plt.show()
