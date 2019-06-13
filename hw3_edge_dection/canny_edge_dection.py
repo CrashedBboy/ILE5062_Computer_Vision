@@ -11,12 +11,12 @@ G_KERNEL_SIZE = 3
 G_SIGMA = 1
 
 # parameters of double threshold
-STRONG_THRESHOLD = 0.3
-WEAK_THRESHOLD = 0.1
+STRONG_THRESHOLD = 0.2
+WEAK_THRESHOLD = 0.05
 STRONG_VALUE = 255
 WEAK_VALUE = 50
 
-IMAGE = './data/freedom_gundam_head.jpg'
+IMAGE = './data/freedom_gundam.jpg'
 
 image_path = path.abspath( path.join( path.dirname(__file__), IMAGE) )
 
