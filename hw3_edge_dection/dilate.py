@@ -9,7 +9,7 @@ import funcs
 # dilation kernel size
 KERNEL_SIZE = 3
 
-IMAGE = './data/freedom_gundam_edge.jpg'
+IMAGE = './data/bird_edge.jpg'
 
 absolute_image = path.abspath( path.join( path.dirname(__file__), IMAGE ) )
 if not path.exists(absolute_image):
@@ -71,8 +71,27 @@ for r in range(border_width, padded_image.shape[0] - border_width):
 
 convolved_image = np.zeros(gray_image.shape, dtype=np.uint8)
 
-# for r in range(convolved_image.shape[0]):
-#     for c in range(convolved_image.shape[1]):
+for r in range(convolved_image.shape[0]):
+    for c in range(convolved_image.shape[1]):
 
         # convolve the image: replace pixel with max value of its neighbor
-        # reflect in border
+        shifted_r = r + border_width
+        shifted_c = c + border_width
+
+        max = 0
+
+        for i in range(shifted_r - int((KERNEL_SIZE-1)/2), shifted_r + int((KERNEL_SIZE-1)/2)):
+            for j in range(shifted_c - int((KERNEL_SIZE-1)/2), shifted_c + int((KERNEL_SIZE-1)/2)):
+                if padded_image[i, j] > max:
+                    max = padded_image[i, j]
+
+        if max > 0:
+            convolved_image[r, c] = max
+
+plt.subplot(1, 2, 1)
+plt.imshow(gray_image, cmap='gray')
+plt.title('Original Image'), plt.xticks([]), plt.yticks([])
+plt.subplot(1, 2, 2)
+plt.imshow(convolved_image, cmap='gray')
+plt.title('Dilated Image'), plt.xticks([]), plt.yticks([])
+plt.show()
